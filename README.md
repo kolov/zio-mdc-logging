@@ -6,15 +6,15 @@ MDC Logging for http4s/Zio
 SLF4J logs any MDC context present in ThreadLocal, but http4s with ZIO executes requests in a fiber, not in a thread.
 
 This library offers :
- - http4s middleware that sets a context map in FiberRef 
- - a wrapper around a logger that retrieves the context from FinerRef and puts it in the ThredLocal before logging.
+ - ZIO environment to create FiberRef
+ - http4s middleware that sets a context in this FiberRef 
+ - a wrapper around a logger that retrieves the context from FiberRef and puts it in the ThreadLocal before logging.
  
-The fiberRef containing the context is passed as a ZIO Environment.
-
+The FiberRef containing the context is passed as a ZIO Environment.
 
 # Usage
  
-To create middleware, pass a function that creates a context map from the request. Here's a mddleware hat will
+To create http4s middleware, pass your function that creates a context map from the request. Here's middleware that will
 create MDC with two fields - `session_id` and `user_agent`
 
 ```scala 
@@ -30,15 +30,14 @@ create MDC with two fields - `session_id` and `user_agent`
   val finalHttpApp: HttpApp[AppTask] = traceMiddleware(routes).orNotFound
 ```
 
-Anywhere in the route code, wrap the logger:
+Anywhere in the route code, wrap an existing slf4j logger and use it:
 
-    val tracingLogger = TracingLogger.tracing(logger)
+    val tracingLogger = TracingLogger.tracing(slf4jLogger)
     
-
     tracingLogger.debug("status route called") *>
           Ok("OK")
           
-Logging is effectful, all logging methods gave type `ZIO[MdcTracing, Nothing, Unit]`
+Logging is effectful, all logging methods have type `ZIO[MdcTracing, Nothing, Unit]`
           
 # Demo
  
