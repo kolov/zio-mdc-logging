@@ -4,6 +4,7 @@ package com.newmotion.locationmanagerviews.common
 import com.typesafe.scalalogging.Logger
 import org.slf4j.MDC
 import zio.{FiberRef, UIO, ZIO}
+import scala.jdk.CollectionConverters._
 
 trait MdcTracing {
   def mdctracing: MdcTracing.Service[Any]
@@ -50,7 +51,7 @@ final class TracingLogger(baseLogger: Logger) {
         ref <- tracing.mdctracing.context
         ctx <- ref.get
         _ <- ZIO.effectTotal {
-          ctx.foreach { case (k, v) => MDC.put(k, v) }
+          MDC.setContextMap(ctx.asJava)
           f(msg)
           MDC.clear()
         }
