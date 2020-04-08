@@ -16,7 +16,8 @@ import zio.interop.catz._
 
 object Main extends zio.App with LazyLogging {
 
-  val tracingLogger = TracingLogger.tracing(logger)
+  val tracingLogger = TracingLogger.tracing(logger.)
+
   type TIO[A] = ZIO[Tracing with Clock, Throwable, A]
 
   val dsl = new Http4sDsl[TIO] {}
