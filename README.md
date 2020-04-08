@@ -18,21 +18,27 @@ To create middleware, pass a function that creates a context map from the reques
 create MDC with two fields - `session_id` and `user_agent`
 
 ```scala 
- val traceMiddleware: HttpMiddleware[TIO] = TracingMiddleware.tracingMiddleware { req: Request[TIO] =>
+ type AppTask[A] = ZIO[zio.ZEnv with MdcTracing, Throwable, A]
+
+ val traceMiddleware: HttpMiddleware[AppTask] = TracingMiddleware { req: Request[AppTask] =>
     req.headers.toList.map(h => (h.name.value, h.value)).collect {
       case ("X-Session-Id", v) => ("session_id", v)
       case ("User-Agent", v) => ("user_agent", v)
     }.toMap
   }
+
+  val finalHttpApp: HttpApp[AppTask] = traceMiddleware(routes).orNotFound
 ```
-Anywhere in the route, wrap the logger:
+
+Anywhere in the route code, wrap the logger:
 
     val tracingLogger = TracingLogger.tracing(logger)
     
-Logging is effectful:
 
     tracingLogger.debug("status route called") *>
           Ok("OK")
+          
+Logging is effectful, all logging methods gave type `ZIO[MdcTracing, Nothing, Unit]`
           
 # Demo
  

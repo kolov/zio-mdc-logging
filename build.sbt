@@ -26,7 +26,8 @@ lazy val demo = (project in file("demo"))
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % "0.21.0-M6",
       "ch.qos.logback" % "logback-classic" % "1.2.3"
-    )
+    ),
+    addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
   )
 
 

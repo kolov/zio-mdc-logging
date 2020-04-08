@@ -2,7 +2,7 @@ package com.akolov.ziomdclogging.demo
 
 import cats.effect.ExitCode
 import com.akolov.ziologging.TracingMiddleware
-import com.newmotion.locationmanagerviews.common.{Tracing, TracingLogger}
+import com.newmotion.locationmanagerviews.common.{MdcTracing, TracingLogger}
 import com.typesafe.scalalogging.LazyLogging
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
@@ -10,42 +10,41 @@ import org.http4s.implicits._
 import org.http4s.server.HttpMiddleware
 import org.http4s.server.blaze.BlazeServerBuilder
 import zio.ZIO
-import zio.clock.Clock
 import zio.interop.catz._
 
 
 object Main extends zio.App with LazyLogging {
 
-  val tracingLogger = TracingLogger.tracing(logger.)
+  val tracingLogger = TracingLogger.tracing(logger)
 
-  type TIO[A] = ZIO[Tracing with Clock, Throwable, A]
+  type AppTask[A] = ZIO[zio.ZEnv with MdcTracing, Throwable, A]
 
-  val dsl = new Http4sDsl[TIO] {}
+  val dsl = new Http4sDsl[AppTask] {}
 
   import dsl._
 
-  val route: HttpRoutes[TIO] = HttpRoutes.of[TIO] {
+  val route: HttpRoutes[AppTask] = HttpRoutes.of[AppTask] {
     case GET -> Root / "status" =>
       tracingLogger.debug("status route called") *>
-      Ok("OK")
+        Ok("OK")
   }
 
-  val traceMiddleware: HttpMiddleware[TIO] = TracingMiddleware.tracingMiddleware { req: Request[TIO] =>
+  val traceMiddleware: HttpMiddleware[AppTask] = TracingMiddleware { req: Request[AppTask] =>
     req.headers.toList.map(h => (h.name.value, h.value)).collect {
       case ("X-Session-Id", v) => ("session_id", v)
       case ("User-Agent", v) => ("user_agent", v)
     }.toMap
   }
 
-  val finalHttpApp: HttpApp[TIO] = traceMiddleware(route).orNotFound
+  val finalHttpApp: HttpApp[AppTask] = traceMiddleware(route).orNotFound
 
-  val io: ZIO[zio.ZEnv with Tracing, Throwable, Unit] = ZIO.runtime[zio.ZEnv with Tracing].flatMap { implicit rts =>
+  val io: ZIO[zio.ZEnv with MdcTracing, Throwable, Unit] = ZIO.runtime[zio.ZEnv with MdcTracing].flatMap { implicit rts =>
     for {
-      _ <- BlazeServerBuilder[TIO]
+      _ <- BlazeServerBuilder[AppTask]
         .bindHttp(8080, "0.0.0.0")
         .withHttpApp(finalHttpApp)
         .serve
-        .compile[TIO, TIO, ExitCode]
+        .compile[AppTask, AppTask, ExitCode]
         .drain
     } yield ()
   }
