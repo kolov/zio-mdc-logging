@@ -18,26 +18,26 @@ To create http4s middleware, pass your function that creates a context map from 
 create MDC with two fields - `session_id` and `user_agent`
 
 ```scala 
- type AppTask[A] = ZIO[zio.ZEnv with MdcTracing, Throwable, A]
+  type AppTask[A] = ZIO[zio.ZEnv with MdcLogging, Throwable, A]
 
- val traceMiddleware: HttpMiddleware[AppTask] = TracingMiddleware { req: Request[AppTask] =>
+  val mdcMiddleware: HttpMiddleware[AppTask] = MdcLoggingMiddleware { req: Request[AppTask] =>
     req.headers.toList.map(h => (h.name.value, h.value)).collect {
       case ("X-Session-Id", v) => ("session_id", v)
       case ("User-Agent", v) => ("user_agent", v)
     }.toMap
   }
 
-  val finalHttpApp: HttpApp[AppTask] = traceMiddleware(routes).orNotFound
+  val finalHttpApp: HttpApp[AppTask] = mdcMiddleware(routes).orNotFound
 ```
 
 Anywhere in the route code, wrap an existing slf4j logger and use it:
 
-    val tracingLogger = TracingLogger.tracing(slf4jLogger)
+    val mdcLogger = MdcLogger.withMdc(logger)
     
-    tracingLogger.debug("status route called") *>
+    mdcLogger.debug("status route called") *>
           Ok("OK")
           
-Logging is effectful, all logging methods have type `ZIO[MdcTracing, Nothing, Unit]`
+Logging is effectful, all logging methods have type `ZIO[MdcLogging, Nothing, Unit]`
           
 # Demo
  

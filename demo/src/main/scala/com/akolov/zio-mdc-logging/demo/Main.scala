@@ -1,8 +1,8 @@
 package com.akolov.ziomdclogging.demo
 
 import cats.effect.ExitCode
-import com.akolov.ziologging.TracingMiddleware
-import com.newmotion.locationmanagerviews.common.{MdcTracing, TracingLogger}
+import com.akolov.ziologging.MdcLoggingMiddleware
+import com.newmotion.locationmanagerviews.common.{MdcLogging, MdcLogger}
 import com.typesafe.scalalogging.LazyLogging
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
@@ -15,9 +15,9 @@ import zio.interop.catz._
 
 object Main extends zio.App with LazyLogging {
 
-  val tracingLogger = TracingLogger.tracing(logger)
+  val mdcLogger = MdcLogger.withMdc(logger)
 
-  type AppTask[A] = ZIO[zio.ZEnv with MdcTracing, Throwable, A]
+  type AppTask[A] = ZIO[zio.ZEnv with MdcLogging, Throwable, A]
 
   val dsl = new Http4sDsl[AppTask] {}
 
@@ -25,20 +25,20 @@ object Main extends zio.App with LazyLogging {
 
   val route: HttpRoutes[AppTask] = HttpRoutes.of[AppTask] {
     case GET -> Root / "status" =>
-      tracingLogger.debug("status route called") *>
+      mdcLogger.debug("status route called") *>
         Ok("OK")
   }
 
-  val traceMiddleware: HttpMiddleware[AppTask] = TracingMiddleware { req: Request[AppTask] =>
+  val mdcMiddleware: HttpMiddleware[AppTask] = MdcLoggingMiddleware { req: Request[AppTask] =>
     req.headers.toList.map(h => (h.name.value, h.value)).collect {
       case ("X-Session-Id", v) => ("session_id", v)
       case ("User-Agent", v) => ("user_agent", v)
     }.toMap
   }
 
-  val finalHttpApp: HttpApp[AppTask] = traceMiddleware(route).orNotFound
+  val finalHttpApp: HttpApp[AppTask] = mdcMiddleware(route).orNotFound
 
-  val io: ZIO[zio.ZEnv with MdcTracing, Throwable, Unit] = ZIO.runtime[zio.ZEnv with MdcTracing].flatMap { implicit rts =>
+  val io: ZIO[zio.ZEnv with MdcLogging, Throwable, Unit] = ZIO.runtime[zio.ZEnv with MdcLogging].flatMap { implicit rts =>
     for {
       _ <- BlazeServerBuilder[AppTask]
         .bindHttp(8080, "0.0.0.0")
@@ -50,7 +50,7 @@ object Main extends zio.App with LazyLogging {
   }
 
 
-  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = TracingMiddleware.provideMDCHolder[Unit](io)
+  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = MdcLoggingMiddleware.provideMDCHolder[Unit](io)
     .fold(_ => 1
       , _ => 0)
 }
