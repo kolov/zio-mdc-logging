@@ -1,9 +1,7 @@
-package com.akolov.ziomdclogging.demo
+package com.newmotion.zio_http4s_mdc.demo
 
 import cats.effect.ExitCode
-import com.akolov.ziologging.MdcLoggingMiddleware
-import com.newmotion.locationmanagerviews.common.{MdcLogging, MdcLogger}
-import com.typesafe.scalalogging.LazyLogging
+import com.newmotion.zio_http4s_mdc.{Log4sMdcLogger, MdcLogging, MdcLoggingMiddleware}
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
 import org.http4s.implicits._
@@ -11,11 +9,11 @@ import org.http4s.server.HttpMiddleware
 import org.http4s.server.blaze.BlazeServerBuilder
 import zio.ZIO
 import zio.interop.catz._
+import org.log4s.getLogger
 
+object Main extends zio.App {
 
-object Main extends zio.App with LazyLogging {
-
-  val mdcLogger = MdcLogger.withMdc(logger)
+  val mdcLogger = Log4sMdcLogger.withMdc(getLogger)
 
   type AppTask[A] = ZIO[zio.ZEnv with MdcLogging, Throwable, A]
 
@@ -26,7 +24,7 @@ object Main extends zio.App with LazyLogging {
   val route: HttpRoutes[AppTask] = HttpRoutes.of[AppTask] {
     case GET -> Root / "status" =>
       mdcLogger.debug("status route called") *>
-        Ok("OK")
+        Ok()
   }
 
   val mdcMiddleware: HttpMiddleware[AppTask] = MdcLoggingMiddleware { req: Request[AppTask] =>
@@ -51,6 +49,8 @@ object Main extends zio.App with LazyLogging {
 
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = MdcLoggingMiddleware.provideMDCHolder[Unit](io)
-    .fold(_ => 1
+    .fold(e => {
+      println(s"Error: $e"); 1
+    }
       , _ => 0)
 }

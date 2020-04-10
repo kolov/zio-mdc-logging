@@ -1,9 +1,7 @@
-package com.akolov.ziologging
-
+package com.newmotion.zio_http4s_mdc
 
 import cats.data.{Kleisli, OptionT}
-import com.newmotion.locationmanagerviews.common.MdcLogging
-import org.http4s.Request
+import org.http4s.{Request, Response}
 import org.http4s.server.HttpMiddleware
 import zio.blocking.Blocking
 import zio.{FiberRef, UIO, ZIO}
@@ -17,12 +15,14 @@ object MdcLoggingMiddleware {
 
 
   def apply[E <: MdcLogging](createMdcContext: Request[ZIO[E, Throwable, *]] => Map[String, String]): HttpMiddleware[ZIO[E, Throwable, *]] = { in =>
-    Kleisli { req =>
-      OptionT(for {
+    type F[A] = ZIO[E, Throwable, A]
+    Kleisli[OptionT[F, *], Request[F], Response[F]] { (req: Request[F]) =>
+      val value: F[Option[Response[F]]] = for {
         mdcRef <- ZIO.accessM[MdcLogging](_.mdclogging.context)
         _ <- mdcRef.set(createMdcContext(req))
         resp <- in.run(req).value
-      } yield resp)
+      } yield resp
+      OptionT[F, Response[F]](value)
     }
   }
 
