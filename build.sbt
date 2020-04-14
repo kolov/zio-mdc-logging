@@ -29,7 +29,7 @@ lazy val demo = (project in file("demo"))
       "org.http4s" %% "http4s-dsl" % "0.21.0-M6",
       "ch.qos.logback" % "logback-classic" % "1.2.3"
     ),
-    publish := {},
+    publishArtifact := false,
     addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
   )
 
@@ -37,7 +37,7 @@ lazy val demo = (project in file("demo"))
 lazy val root = (project in file("."))
   .aggregate(demo, core)
   .settings(
-    publish := {}
+    publishArtifact := false
   )
 
  
