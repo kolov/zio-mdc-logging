@@ -39,5 +39,6 @@ lazy val root = (project in file("."))
   .settings(
     publishArtifact := false
   )
+  .enablePlugins(BasicPlugin)
 
  
