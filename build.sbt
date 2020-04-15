@@ -23,8 +23,9 @@ lazy val core = (project in file("core"))
 lazy val demo = (project in file("demo"))
   .dependsOn(core)
   .settings(
-    name         := "http4s-zio-mdc-logging-demo",
-    scalaVersion := "2.13.1",
+    name               := "http4s-zio-mdc-logging-demo",
+    crossScalaVersions := Seq(tnm.ScalaVersion.prev, tnm.ScalaVersion.curr),
+    scalaVersion       := tnm.ScalaVersion.curr,
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % "0.21.0-M6",
       "ch.qos.logback"             % "logback-classic" % "1.2.3"
