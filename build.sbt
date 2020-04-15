@@ -39,6 +39,7 @@ lazy val root = (project in file("."))
   .aggregate(demo, core)
   .settings(
     publishArtifact    := false,
+    crossScalaVersions := Seq(tnm.ScalaVersion.prev, tnm.ScalaVersion.curr),
     crossScalaVersions := Nil
   )
   .enablePlugins(BasicPlugin)
